@@ -105,22 +105,16 @@ int main() {
           vector<double> plot_x_vals;
           vector<double> plot_y_vals;
 
-          //// Convert observation to world/map coordinates
-          //double obs_x, obs_y;
-          //obs_x = p.x + obs.x * cos(p.theta) - obs.y * sin(p.theta);
-          //obs_y = p.y + obs.x * sin(p.theta) + obs.y * cos(p.theta);
-
           // Convert x, y waypoints (in global coords) to car coordinates
           for (int i=0; i<ptsx.size(); i++) {
+            // centre and rotate the coords to get the car point of view
             double x_diff = ptsx[i] - px;
             double y_diff = ptsy[i] - py;
-            ptsx[i] = x_diff * cos(-psi) - y_diff * sin(-psi);
-            ptsy[i] = x_diff * sin(-psi) + y_diff * cos(-psi);
+            //ptsx[i] = x_diff * cos(-psi) - y_diff * sin(-psi);
+            //ptsy[i] = x_diff * sin(-psi) + y_diff * cos(-psi);
+            ptsx[i] = x_diff * cos(psi) + y_diff * sin(psi);
+            ptsy[i] = y_diff * cos(psi) - x_diff * sin(psi);
 
-            //double x = ptsx[i];
-            //double y = ptsy[i];
-            //ptsx[i] = x * cos(psi) - y * sin(psi) + px;
-            //ptsy[i] = x * sin(psi) + y * cos(psi) + py;
 
             plot_x_vals.push_back(ptsx[i]);
             plot_y_vals.push_back(ptsy[i]);
@@ -135,13 +129,13 @@ int main() {
           // calculate the cross track error and psi error values (determined from
           // atan(derivative of the polynomial)).
           auto coeffs = polyfit(ptsxv, ptsyv, 3);
-          double cte = polyeval(coeffs, px) - py;
+          double cte = polyeval(coeffs, 0 /*px*/) - py;
           //double epsi = -atan(coeffs[1]);
-          double epsi = psi - atan(coeffs[1]+coeffs[2]*2*px+coeffs[3]*3*px*px);
+          double epsi = /*psi*/ -atan(coeffs[1]+coeffs[2]*2*px+coeffs[3]*3*px*px);
 
           // Setup the state
           Eigen::VectorXd state(6);
-          state << px, py, psi, v, cte, epsi;
+          state << 0 /*px*/, 0 /*py*/, 0 /*psi*/, v, cte, epsi;
           std::cout << "STATE: " << px << "\t" << py << "\t" << psi << "\t" << v << "\t" << cte << "\t" << epsi << std::endl;
 
           auto vars = mpc.Solve(state, coeffs);
@@ -175,15 +169,24 @@ int main() {
           // repeating pairs of x,y coords.
           vector<double> plot_mpc_x_vals;
           vector<double> plot_mpc_y_vals;
-          //for (int i=2; i<vars.size(); i++) {
-          for (int i=2; i<8; i++) {
-            if (i%2 == 0) {
-              plot_mpc_x_vals.push_back(vars[i]);
-              std::cout << "MPC X: " << vars[i] << std::endl;
-            } else {
-              plot_mpc_y_vals.push_back(vars[i]);
-              std::cout << "MPC Y: " << vars[i] << std::endl;
-            }
+          // std::cout << "VARS.size(): " << vars.size() << std::endl;
+          // for (int i=2; i<vars.size(); i++) {
+          // //for (int i=2; i<8; i++) {
+          //   if (i%2 == 0) {
+          //     plot_mpc_x_vals.push_back(vars[i]);
+          //     //std::cout << "MPC X: " << vars[i] << std::endl;
+          //   } else {
+          //     plot_mpc_y_vals.push_back(vars[i]);
+          //     //std::cout << "MPC Y: " << vars[i] << std::endl;
+          //   }
+          // }
+
+          auto N = (vars.size()-2)/2;
+          for (int i=3; i<N+2;i++) {
+            double temp_x = vars[i];
+            double temp_y = vars[i+N];
+            plot_mpc_x_vals.push_back(temp_x);
+            plot_mpc_y_vals.push_back(temp_y);
           }
 
           json msgJson;
@@ -208,7 +211,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(100));
+          //this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
