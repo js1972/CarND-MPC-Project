@@ -6,6 +6,8 @@ Self-Driving Car Engineer Nanodegree Program
 ## Overview
 This project makes use of a Model Predictive Controller to guide a car around a race track in the Udacity simulator. Not only does it provide a much smoother route than a PID controller but it can easily handle a delay in actuations.
 
+[![MPC video](https://img.youtube.com/vi/58iHH6TjHwQ/0.jpg)](https://www.youtube.com/watch?v=58iHH6TjHwQ)
+
 ## Model
 Model Predictive Control involves simulating a series of actuator inputs (steering, accelerator), predicting the resulting trajectories and selecting the trajectory with the minimum cost.
 With the found, lowest cost trajectory we implement only the first actuation command and throw away the rest. We then take our new state and use that once again to predict future trajectories, starting the process over.
@@ -14,7 +16,7 @@ For this project we have used a kinematic model of the car, which is a simplific
 
 At low and moderate speeds kinematic models are a good approxmation.
 
-![vehicle kinematic model](kinematic model graphic.png)
+![vehicle kinematic model](kinematic_model_graphic.png)
 
 The state vector for our kinematic model is made up of [x, y, ψ, ν, δ, a], where
 - x is the cars x position
@@ -27,7 +29,7 @@ The state vector for our kinematic model is made up of [x, y, ψ, ν, δ, a], wh
 Note how we have appended the atuations (δ, a) to the state vector.
 Below are the kinematic equations or motion model for our car.
 
-![vehicle kinematic model equations](kinematic model.png)
+![vehicle kinematic model equations](kinematic_model.png)
 
 We fit a polynomial to the way points around the track (in this project we have chosen a 3rd order polynomial) to specify the reference trajectory.
 
@@ -60,7 +62,7 @@ See ine #57 of MPC.cpp for the weights of each cost component I have chosen. The
 T should not be more than a few seconds at most. Beyond this, the environment may have changed too much.
 
 I have chosen a value of T at 1.5 seconds with `N = 10` and `dt = 0.15`.
-Combined with the cost function tuning from line #56 of MPC.cpp this allows the car to travel very smoothly at a speed of 60mph (slowing where necessary for the corners automatically).
+Combined with the cost function tuning from line #56 of MPC.cpp this allows the car to travel very smoothly at a speed of 50mph (slowing where necessary for the corners automatically).
 
 These parameters were determined empirically by continually varying each and checking the cars performance, first at a slow speed of 20mph. Once good parameters were found I gradually increaed the reference speed.
 

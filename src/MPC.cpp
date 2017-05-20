@@ -25,7 +25,7 @@ const double Lf = 2.67;
 // The reference velocity is set to 40 mph.
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 60; // 60 is safe - above that the solver craps itself on the left turn after the bridge;
+double ref_v = 50; // 50 is safe - above that the solver craps itself on the left turn after the bridge;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
