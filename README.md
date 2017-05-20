@@ -3,6 +3,71 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## Overview
+This project makes use of a Model Predictive Controller to guide a car around a race track in the Udacity simulator. Not only does it provide a much smoother route than a PID controller but it can easily handle a delay in actuations.
+
+## Model
+Model Predictive Control involves simulating a series of actuator inputs (steering, accelerator), predicting the resulting trajectories and selecting the trajectory with the minimum cost.
+With the found, lowest cost trajectory we implement only the first actuation command and throw away the rest. We then take our new state and use that once again to predict future trajectories, starting the process over.
+
+For this project we have used a kinematic model of the car, which is a simplification of a full dynamic model, ignoring the effects of tyre forces, gravity and mass.
+
+At low and moderate speeds kinematic models are a good approxmation.
+
+![vehicle kinematic model](kinematic model graphic.png)
+
+The state vector for our kinematic model is made up of [x, y, ψ, ν, δ, a], where
+- x is the cars x position
+- y is the cars y position
+- ψ (psi) is the cars angle in radians from the x-direction
+- ν is the cars velocity
+- δ (delta) is the steering input in radians
+- a is the cars accelerator input
+
+Note how we have appended the atuations (δ, a) to the state vector.
+Below are the kinematic equations or motion model for our car.
+
+![vehicle kinematic model equations](kinematic model.png)
+
+We fit a polynomial to the way points around the track (in this project we have chosen a 3rd order polynomial) to specify the reference trajectory.
+
+We wish to minimise the error between the reference trajectory and the vehicles path. In doing so we must calculate the error - made up of *cte* and *epsi*.
+
+The general steps taken during processing are as follows:
+
+main.cpp
+- The telemetry from the Udacity simulator provides us with a series of waypoints - the closest 6 in front of the car. These are in global coordinates so first we must convert them to the cars reference frame
+- Fit a 3rd order polynomial to the waypoints
+- Calculate the cte and epsi error values. cte calculated by evaluating the polynomial at the cars x position (which is 0 in the cars reference frame), then subtracting py. The epsi value is calculated as follows: -atan(`derivative of fitted ploynomial`)
+- Set the current state vector
+- We then use a nonlinear solver (this project makes use of IPopt) to determine the best trajectory and set the next steering and throttle command to the first determined actuations.
+
+MPC.cpp
+- The solve function sets up our variables and constraints and solves the problem using he passed in `FG_eval` object.
+- `FG_eval` is called by the solver and specifies our cost function and some further constraints. Adjusting the cost function as well as the global `N` and `dt` values is what is required to tune the model.
+
+## Tuning
+The cost function is broken up into 3 separate additive components:
+1. The reference state
+2. Minimise the use of actuators
+3. Minimise the difference between successive actuations
+
+Tuning the weight applied to each of these parts is required to ensure the car drives smoothly and can successfully get around the track with as little error as possible.
+
+See ine #57 of MPC.cpp for the weights of each cost component I have chosen. There operate in tandem with the global parameters `N` and `dt`.
+`N` is the number of timesteps into the future. `dt` is the time between each activation. Multiplying these together give the prediction horizon (the duration over which future predictions are made, or T).
+
+T should not be more than a few seconds at most. Beyond this, the environment may have changed too much.
+
+I have chosen a value of T at 1.5 seconds with `N = 10` and `dt = 0.15`.
+Combined with the cost function tuning from line #56 of MPC.cpp this allows the car to travel very smoothly at a speed of 60mph (slowing where necessary for the corners automatically).
+
+These parameters were determined empirically by continually varying each and checking the cars performance, first at a slow speed of 20mph. Once good parameters were found I gradually increaed the reference speed.
+
+Once the reference speed goes above 60mph we notice that at certain places around the track the solver is unable to find a usable result (this is when the green line goes crazy). This only occurs for a split second and does not effect the cars performance up to around 80mph.
+
+Note that the above parameter-tuning handles the 100msec actuator delay (which is mocked in main.cpp to approximate the real delay in actuating a real vehicle). In fact I found very little difference with out without the delay showing the strength of the MPC model as opposed to PID which overshoots when delays are encountered.
+
 ## Dependencies
 
 * cmake >= 3.5
@@ -19,7 +84,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Follow the instructions in the [uWebSockets README](https://github.com/uWebSockets/uWebSockets/blob/master/README.md) to get setup for your platform. You can download the zip of the appropriate version from the [releases page](https://github.com/uWebSockets/uWebSockets/releases). Here's a link to the [v0.14 zip](https://github.com/uWebSockets/uWebSockets/archive/v0.14.0.zip).
   * If you have MacOS and have [Homebrew](https://brew.sh/) installed you can just run the ./install-mac.sh script to install this.
 * [Ipopt](https://projects.coin-or.org/Ipopt)
-  * Mac: `brew install ipopt --with-openblas`
+  * Mac: `brew install ipopt --with-openblas`. **WARNING** - I found I had to install without the openblas switch: `brew install ipopt`. When using the --with-openblas switch the project still builds fine; however the results from the solver are not valid!
   * Linux
     * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from [here](https://www.coin-or.org/download/source/Ipopt/).
     * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
