@@ -25,7 +25,7 @@ const double Lf = 2.67;
 // The reference velocity is set to 40 mph.
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 40;
+double ref_v = 60; // 60 is safe - above that the solver craps itself on the left turn after the bridge;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -55,9 +55,13 @@ class FG_eval {
     fg[0] = 0;
 
     // The part of the cost based on the reference state.
+    // I need to put a high weight on the reference state here based on the values for 
+    // N and dt; otherwise the solver fails!!!
     for (int i = 0; i < N; i++) {
-      fg[0] += 1500 * CppAD::pow(vars[cte_start + i] - ref_cte, 2);
-      fg[0] += 1500 * CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
+      fg[0] += 1000 * CppAD::pow(vars[cte_start + i] - ref_cte, 2);
+      fg[0] += 1000 * CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
+      // fg[0] += CppAD::pow(vars[cte_start + i] - ref_cte, 2);
+      // fg[0] += CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
       fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
 
@@ -257,22 +261,17 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   //        solution.x[psi_start + 1], solution.x[v_start + 1],
   //        solution.x[cte_start + 1], solution.x[epsi_start + 1],
   //        solution.x[delta_start],   solution.x[a_start]};
-
   //return {solution.x[delta_start], solution.x[a_start]};
 
-  // Send back a result containing the required 'delta' and 'a' and
-  // additionally send back all the x, values that were found as the
+  // Send back the result containing the required 'delta' and 'a' and
+  // additionally send back all the (x, y) values that were found as the
   // best - for plotting purposes...
   vector<double> result = {solution.x[delta_start], solution.x[a_start]};
-  //result.push_back(solution.x[delta_start]);
-  //result.push_back(solution.x[a_start]);
-
-  // for (int i=0; i<N; i++) {
-  // 	result.push_back(solution.x[x_start + i]);
-  // 	result.push_back(solution.x[y_start + i]);
-  // }
-  for (int i=0; i<2*N; i++){
-    result.push_back(solution.x[x_start+i]);
+  for (int i=0; i <N; i++) {
+    result.push_back(solution.x[x_start + i]);
+  }
+  for (int i=0; i <N; i++) {
+    result.push_back(solution.x[y_start + i]);
   }
 
   return result;

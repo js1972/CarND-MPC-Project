@@ -102,25 +102,21 @@ int main() {
           *
           */
 
+          // Convert x, y waypoints (in global coords) to car coordinates
+          // (car at origin).
+          // First we center the coords then rotate then counter-clockwise
           vector<double> plot_x_vals;
           vector<double> plot_y_vals;
-
-          // Convert x, y waypoints (in global coords) to car coordinates
+          
           for (int i=0; i<ptsx.size(); i++) {
-            // centre and rotate the coords to get the car point of view
             double x_diff = ptsx[i] - px;
             double y_diff = ptsy[i] - py;
-            //ptsx[i] = x_diff * cos(-psi) - y_diff * sin(-psi);
-            //ptsy[i] = x_diff * sin(-psi) + y_diff * cos(-psi);
             ptsx[i] = x_diff * cos(psi) + y_diff * sin(psi);
             ptsy[i] = y_diff * cos(psi) - x_diff * sin(psi);
-
 
             plot_x_vals.push_back(ptsx[i]);
             plot_y_vals.push_back(ptsy[i]);
           }
-
-          //psi = psi - pi();
 
           Eigen::VectorXd ptsxv = Eigen::VectorXd::Map(ptsx.data(), ptsx.size());
           Eigen::VectorXd ptsyv = Eigen::VectorXd::Map(ptsy.data(), ptsy.size());
@@ -129,60 +125,29 @@ int main() {
           // calculate the cross track error and psi error values (determined from
           // atan(derivative of the polynomial)).
           auto coeffs = polyfit(ptsxv, ptsyv, 3);
+
+          // Calculate error
           double cte = polyeval(coeffs, 0 /*px*/) - py;
-          //double epsi = -atan(coeffs[1]);
           double epsi = /*psi*/ -atan(coeffs[1]+coeffs[2]*2*px+coeffs[3]*3*px*px);
 
           // Setup the state
+          // Note: these values are in vehicle coords so px, py, psi is always 0 (with 
+          // the vehicle at the origin).
           Eigen::VectorXd state(6);
           state << 0 /*px*/, 0 /*py*/, 0 /*psi*/, v, cte, epsi;
           std::cout << "STATE: " << px << "\t" << py << "\t" << psi << "\t" << v << "\t" << cte << "\t" << epsi << std::endl;
 
           auto vars = mpc.Solve(state, coeffs);
-          
-          
-          // Generate a range of x, y values from our fitted polynomial for plotting (N=25)
-          //vector<double> plot_x_vals(25);
-          //vector<double> plot_y_vals(25);
-          //int inc_x = 0;
-          //int inc_y = 0;
-          //std::generate(plot_x_vals.begin(), plot_x_vals.end(), [&]{ inc_x++; return 2.5*inc_x; });
-          //std::generate(plot_y_vals.begin(), plot_y_vals.end(), [&]{ inc_y++; return polyeval(coeffs, 2.5*inc_y); });
-
-          //std::cout << "plot_x_vals:" << std::endl;
-          //for (int i=0; i< plot_x_vals.size(); i++) {
-          //  std::cout << plot_x_vals[i] << "\t";
-          //}
-          //std::cout << std::endl;
-
-          std::cout << "VARS:" << std::endl;
-          for (int i=0; i<vars.size(); i++) {
-            std::cout << vars[i] << "\t";
-          }
-          std::cout << std::endl;
-
           double steer_value = -vars[0];
           double throttle_value = vars[1];
 
-          // Generate a range of x, y values from our mpc generated (best) points for plotting.
-          // Note: the vars structure is made up of the steering value, throttle value, then
-          // repeating pairs of x,y coords.
+          // Get the x, y values from our mpc generated (best) points for plotting.
+          // Note: the vars structure is made up of the delta value, acceleration
+          // value, then repeating all the found x points followig by all the y points.
           vector<double> plot_mpc_x_vals;
           vector<double> plot_mpc_y_vals;
-          // std::cout << "VARS.size(): " << vars.size() << std::endl;
-          // for (int i=2; i<vars.size(); i++) {
-          // //for (int i=2; i<8; i++) {
-          //   if (i%2 == 0) {
-          //     plot_mpc_x_vals.push_back(vars[i]);
-          //     //std::cout << "MPC X: " << vars[i] << std::endl;
-          //   } else {
-          //     plot_mpc_y_vals.push_back(vars[i]);
-          //     //std::cout << "MPC Y: " << vars[i] << std::endl;
-          //   }
-          // }
-
           auto N = (vars.size()-2)/2;
-          for (int i=3; i<N+2;i++) {
+          for (int i=3; i<N+2; i++) {
             double temp_x = vars[i];
             double temp_y = vars[i+N];
             plot_mpc_x_vals.push_back(temp_x);
@@ -211,7 +176,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          //this_thread::sleep_for(chrono::milliseconds(100));
+          this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
