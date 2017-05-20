@@ -107,7 +107,7 @@ int main() {
           // First we center the coords then rotate then counter-clockwise
           vector<double> plot_x_vals;
           vector<double> plot_y_vals;
-          
+
           for (int i=0; i<ptsx.size(); i++) {
             double x_diff = ptsx[i] - px;
             double y_diff = ptsy[i] - py;
@@ -143,7 +143,7 @@ int main() {
 
           // Get the x, y values from our mpc generated (best) points for plotting.
           // Note: the vars structure is made up of the delta value, acceleration
-          // value, then repeating all the found x points followig by all the y points.
+          // value, then repeating all the found x points followed by all the y points.
           vector<double> plot_mpc_x_vals;
           vector<double> plot_mpc_y_vals;
           auto N = (vars.size()-2)/2;
