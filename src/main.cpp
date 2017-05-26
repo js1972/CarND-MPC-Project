@@ -127,18 +127,20 @@ int main() {
           auto coeffs = polyfit(ptsxv, ptsyv, 3);
 
           // Calculate error
-          double cte = polyeval(coeffs, 0 /*px*/) - py;
-          double epsi = /*psi*/ -atan(coeffs[1]+coeffs[2]*2*px+coeffs[3]*3*px*px);
+          // double cte = polyeval(coeffs, 0 /*px*/) - py;
+          // double epsi = /*psi*/ -atan(coeffs[1]+coeffs[2]*2*px+coeffs[3]*3*px*px);
+          double cte = polyeval(coeffs, 0 /*px*/);
+          double epsi = /*psi*/ -atan(coeffs[1] /* other terms are zero due to px = 0 */);
 
           // Setup the state
           // Note: these values are in vehicle coords so px, py, psi is always 0 (with 
           // the vehicle at the origin).
           Eigen::VectorXd state(6);
           state << 0 /*px*/, 0 /*py*/, 0 /*psi*/, v, cte, epsi;
-          std::cout << "STATE: " << px << "\t" << py << "\t" << psi << "\t" << v << "\t" << cte << "\t" << epsi << std::endl;
 
           auto vars = mpc.Solve(state, coeffs);
-          double steer_value = -vars[0];
+          //double steer_value = -vars[0];
+          double steer_value = -vars[0] / deg2rad(25); //convert to degrees and normalise to [-1, 1]
           double throttle_value = vars[1];
 
           // Get the x, y values from our mpc generated (best) points for plotting.

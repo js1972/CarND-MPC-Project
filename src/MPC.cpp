@@ -5,9 +5,9 @@
 
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
+// Set the time horizon via timestep length and duration - 1.5sec
 size_t N = 10; //25;
-double dt = 0.15; //0.001; //0.05;  0.05 is not enough actuations for this use-case!!! Car can't turn quick enough.
+double dt = 0.1; //0.15; //0.001; //0.05;  0.05 is not enough actuations for this use-case!!! Car can't turn quick enough.
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -58,22 +58,20 @@ class FG_eval {
     // I need to put a high weight on the reference state here based on the values for 
     // N and dt; otherwise the solver fails!!!
     for (int i = 0; i < N; i++) {
-      fg[0] += 1000 * CppAD::pow(vars[cte_start + i] - ref_cte, 2);
-      fg[0] += 1000 * CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
-      // fg[0] += CppAD::pow(vars[cte_start + i] - ref_cte, 2);
-      // fg[0] += CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
+      fg[0] += 5000 * CppAD::pow(vars[cte_start + i] - ref_cte, 2); //1000
+      fg[0] += CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
       fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
     for (int i = 0; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += 100000 * CppAD::pow(vars[delta_start + i], 2); //50
       fg[0] += CppAD::pow(vars[a_start + i], 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (int i = 0; i < N - 2; i++) {
-      fg[0] += 200 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 2000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2); //500
       fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
@@ -266,7 +264,20 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   // Send back the result containing the required 'delta' and 'a' and
   // additionally send back all the (x, y) values that were found as the
   // best - for plotting purposes...
-  vector<double> result = {solution.x[delta_start], solution.x[a_start]};
+
+  double delta = 0.0;
+  double a = 0.0;
+  for (int i=0; i<3; i++)
+  {
+    delta += solution.x[delta_start+i];
+    a += solution.x[a_start+i];
+  }
+  delta = delta/3;
+  a = a/3;
+
+  //vector<double> result = {solution.x[delta_start], solution.x[a_start]};
+  vector<double> result = {delta, a};
+
   for (int i=0; i <N; i++) {
     result.push_back(solution.x[x_start + i]);
   }
