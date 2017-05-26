@@ -140,7 +140,7 @@ int main() {
 
           auto vars = mpc.Solve(state, coeffs);
           //double steer_value = -vars[0];
-          double steer_value = -vars[0] / deg2rad(25); //convert to degrees and normalise to [-1, 1]
+          double steer_value = -vars[0] / deg2rad(25); //normalise based on 25 degrees = 1 for steering input [-1, 1]
           double throttle_value = vars[1];
 
           // Get the x, y values from our mpc generated (best) points for plotting.

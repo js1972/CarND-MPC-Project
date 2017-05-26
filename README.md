@@ -43,6 +43,7 @@ main.cpp
 - Calculate the cte and epsi error values. cte calculated by evaluating the polynomial at the cars x position (which is 0 in the cars reference frame), then subtracting py. The epsi value is calculated as follows: -atan(`derivative of fitted ploynomial`)
 - Set the current state vector
 - We then use a nonlinear solver (this project makes use of IPopt) to determine the best trajectory and set the next steering and throttle command to the first determined actuations.
+- Instead of directly using the first actuations from the solver, I average the first 3 actuations which enable it to handle the latency in the actuation system (currently 100msec).
 
 MPC.cpp
 - The solve function sets up our variables and constraints and solves the problem using he passed in `FG_eval` object.
@@ -61,14 +62,17 @@ See ine #57 of MPC.cpp for the weights of each cost component I have chosen. The
 
 T should not be more than a few seconds at most. Beyond this, the environment may have changed too much.
 
-I have chosen a value of T at 1.5 seconds with `N = 10` and `dt = 0.15`.
+I have chosen a value of T at 1 seconds with `N = 10` and `dt = 0.1`.
 Combined with the cost function tuning from line #56 of MPC.cpp this allows the car to travel very smoothly at a speed of 50mph (slowing where necessary for the corners automatically).
 
 These parameters were determined empirically by continually varying each and checking the cars performance, first at a slow speed of 20mph. Once good parameters were found I gradually increaed the reference speed.
 
 Once the reference speed goes above 60mph we notice that at certain places around the track the solver is unable to find a usable result (this is when the green line goes crazy). This only occurs for a split second and does not effect the cars performance up to around 80mph.
 
-Note that the above parameter-tuning handles the 100msec actuator delay (which is mocked in main.cpp to approximate the real delay in actuating a real vehicle). In fact I found very little difference with out without the delay showing the strength of the MPC model as opposed to PID which overshoots when delays are encountered.
+## Latency
+To handle the actuator latency of 100msec I need to do two things. Firstly I averaged the frst 3 MPC `delta` and `a` values and secondly reduced the dt value in MPC.cpp. This handles the 100msec latency very well with the reference speed set to 50mph.
+
+Before averaging the MPC results I tried moving the dx value in the state forward by v*dt (where dt was equal to the 100msec latency) however this didn't seem to help. Also - using the third set of results from MPC was also not good enough.
 
 ## Dependencies
 
